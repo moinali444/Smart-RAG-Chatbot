@@ -3,7 +3,6 @@ from PyPDF2 import PdfReader
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
-import ollama
 
 # ---------------- UI CONFIG ----------------
 st.set_page_config(page_title="RAG Chatbot", page_icon="🤖", layout="wide")
@@ -54,29 +53,6 @@ def search(query, index, chunks, k=3):
     D, I = index.search(np.array(q_embed), k)
     return [chunks[i] for i in I[0]]
 
-# ---------------- LLM FUNCTION (MISTRAL) ----------------
-def generate_answer(query, context):
-    prompt = f"""
-You are a smart AI assistant.
-
-Answer the question clearly using the context below.
-
-Context:
-{context}
-
-Question:
-{query}
-
-Give a correct and concise answer:
-"""
-
-    response = ollama.chat(
-        model='gemma3:4b',   # or use 'gemma:4b' if mistral is slow
-        messages=[{'role': 'user', 'content': prompt}]
-    )
-
-    return response['message']['content']
-
 # ---------------- SIDEBAR ----------------
 st.sidebar.header("📂 Upload Section")
 uploaded_files = st.sidebar.file_uploader("Upload PDFs", accept_multiple_files=True)
@@ -96,14 +72,11 @@ if uploaded_files:
     query = st.text_input("💬 Ask your question:")
 
     if query:
-        with st.spinner("🤖 Thinking..."):
+        with st.spinner("🔍 Searching..."):
             results = search(query, index, chunks)
 
-            context = " ".join(results)
-            answer = generate_answer(query, context)
-
         st.markdown("### 🧠 Answer")
-        st.success(answer)
+        st.success(results[0])  # Top relevant chunk
 
         with st.expander("📚 View Sources"):
             for r in results:
